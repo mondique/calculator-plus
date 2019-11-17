@@ -258,9 +258,11 @@ class AppView(
     override fun pushInteraction(input: String, result: String) {
         addTextToLayout(">>> " + input)
         val resultExpression = addTextToLayout(result)
-        val resultBackground = activity.getResources().getDrawable(
-            R.drawable.expression_background, null)
-        resultExpression.setBackground(resultBackground)
+        if (result != "") {
+            val resultBackground = activity.getResources().getDrawable(
+                R.drawable.expression_background, null)
+            resultExpression.setBackground(resultBackground)
+        }
         resetInput()
         val scrollView = activity.findViewById<ScrollView>(R.id.expressionsScrollView)
         scrollView.post {
