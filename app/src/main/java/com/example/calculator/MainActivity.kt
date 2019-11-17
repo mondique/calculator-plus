@@ -25,7 +25,7 @@ class MainActivity : AppCompatActivity() {
     // val expressionViews: MutableList<TextView> = mutableListOf()
     val calculator = Calculator()
     val presenter = Presenter(calculator)
-    val view = IView(this, presenter)
+    val view = AppView(this, presenter)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -230,7 +230,7 @@ class LiveExpressionView(context: Context, attrs: AttributeSet) :
     }
 }
 
-class IView(
+class AppView(
     val activity: MainActivity,
     val presenter: Presenter
 ) : IPresenterObserver {
@@ -303,11 +303,11 @@ class Presenter(
     val viewSubscribers: MutableList<IPresenterObserver> = mutableListOf()
 ) : ICalculatorObserver {
 
-    fun subscribeView(subscriber: IView) {
+    fun subscribeView(subscriber: AppView) {
         viewSubscribers.add(subscriber)
     }
 
-    fun unsubscribeView(subscriber: IView) {
+    fun unsubscribeView(subscriber: AppView) {
         viewSubscribers.remove(subscriber)
     }
 
@@ -380,16 +380,6 @@ class Presenter(
             subscriber.resetInput()
         }
     }
-
-    // fun onResultChange() {
-    //     notifySubscribersOnResultChange()
-    // }
-
-    // fun notifySubscribersOnResultChange() {
-    //     for (subscriber in viewSubscribers) {
-    //         subscriber.onLiveResultChanged(calculator.getOutput())
-    //     }
-    // }
 }
 
 class InputPosition(val start: Int, val end: Int = start) {
@@ -403,25 +393,12 @@ class InputPosition(val start: Int, val end: Int = start) {
     }
 }
 
-interface ICalculatorObserver {
-    // fun onResultChange() {}
-}
-
 class Calculator(
-    val scope: VariableScope = VariableScope(),
-    val subscribers: MutableList<ICalculatorObserver> = mutableListOf()
+    val scope: VariableScope = VariableScope()
 ) {
     var inputExpression: String = ""
     private var resultTree: ExpressionNode? = null
     var result: Value? = null
-
-    fun subscribe(subscriber: ICalculatorObserver) {
-        subscribers.add(subscriber)
-    }
-
-    fun unsubscribe(subscriber: ICalculatorObserver) {
-        subscribers.remove(subscriber)
-    }
 
     fun setInput(newInput: String) {
         inputExpression = newInput
@@ -441,18 +418,6 @@ class Calculator(
     fun resetInput() {
         inputExpression = ""
     }
-
-    // fun notifySubscribersOnResultChanged() {
-    //     for (subscriber in subscribers) {
-    //         subscriber.onLiveResultChanged(result)
-    //     }
-    // }
-
-    // fun notifySubscribersOnInputDone() {
-    //     for (subscriber in subscribers) {
-    //         subscriber.onResultDone()
-    //     }
-    // }
 
     fun calculateResult() {
         resultTree = parseString(inputExpression, scope)
@@ -490,7 +455,6 @@ fun applyAssigns(resultTree: ExpressionNode?, scope: VariableScope) {
     scope.addVariable(resultTree.x!!.getVal().toName(), rhs)
 }
 
-// val iView: IView
 fun calculateResultFromTree(
     expression: ExpressionNode?,
     scope: VariableScope
@@ -629,13 +593,6 @@ fun parseSubstring(
         value = Value(inputText)
     }
     return ExpressionNode(value)
-    // if (value.isDouble() || value.isInt() || value.isError()) return ExpressionNode(value)
-
-    // // value is Name
-    // if (value.toName() in scope) {
-    //     return ExpressionNode(scope.getValue(value.toString())!!)
-    // }
-    // return ExpressionNode(Value("ERROR: variable ${value.toName()} not found"))
 }
 
 fun getVariableName(text: String, begin: Int, end: Int): String? {
@@ -906,15 +863,6 @@ class Value(
     enum class Type {
         INT, DOUBLE, NAME, ERROR
     }
-
-    // constructor(valType: Type, rawVal: String) {
-    //     when(valType) {
-    //         Type.INT -> this(valType, null, rawVal.toInt(), null)
-    //         Type.DOUBLE -> this(valType, rawVal.toDouble(), null, null)
-    //         Type.STRING -> this(valType, null, null, rawVal)
-    //     }
-    // }
-
     constructor(rawVal: String) : this(
         getStringType(rawVal),
         rawVal.toDoubleOrNull(),
