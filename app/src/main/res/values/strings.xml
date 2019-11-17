@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Test</string>
+    <string name="app_title">Calculator+</string>
+    <string name="shuffleButtonText">Shuffle</string>
+    <string name="defaultLiveResult">...</string>
+</resources>
+

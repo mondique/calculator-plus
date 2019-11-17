@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+    <!-- android:padding="1dp" -->
+<com.example.calculator.ButtonView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:elevation="2dp"
+    android:paddingLeft="3dp"
+    android:paddingRight="3dp">
+
+    <android.widget.TextView
+        style="@style/monospaceFont"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="26sp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="10dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp"
+    />
+
+</com.example.calculator.ButtonView>
+    <!-- android:clickable="true" -->
+    <!-- android:background="@drawable/expression_background" -->
+    <!-- android:textIsSelectable="true" -->
+

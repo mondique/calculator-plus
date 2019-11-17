@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#008577</color>
+    <color name="colorPrimaryDark">#00574B</color>
+    <color name="colorAccent">#f36c35</color>
+    <!-- <color name="colorAccent">#D81B60</color> -->
+    <!-- <color name="yellow">#fffb2d</color> -->
+    <!-- <color name="yellow">#e9ff00</color> -->
+    <color name="yellow">#f7f451</color>
+    <!-- <color name="red">#ff4823</color> -->
+    <color name="blue">#00bbff</color>
+    <color name="black">#000000</color>
+    <color name="cyan">#a0e8e3</color>
+    <!-- <color name="purple">#f44280</color> -->
+    <!-- <color name="purple">#ce7191</color> -->
+    <color name="purple">#ef7fa5</color>
+    <!-- <color name="darkPurple">#7785ff</color> -->
+    <!-- <color name="darkPurple">#9b75ef</color> -->
+    <color name="darkPurple">#b987f2</color>
+    <!-- #e570a7 -->
+    <!-- <color name="green">#41f46e</color> -->
+    <!-- <color name="green">#5aed57</color> -->
+    <color name="green">#57e573</color>
+    <!-- <color name="orange">#ffa500</color> -->
+    <color name="orange">#ffbb3f</color>
+    <color name="brown">#ff9d00</color>
+    <color name="transparent">#00000000</color>
+    <color name="titleColor">#000000</color>
+
+    <!-- <color name="titleBackgroundColor">#47bde8</color> -->
+    <color name="titleBackgroundBrighterColor">#f47c4a</color>
+    <color name="titleBackgroundColor">#f47641</color>
+    <color name="titleBackgroundDarkerColor">#f36c35</color>
+
+    <!-- <color name="cellBg1">#f7dc99</color> -->
+    <!-- <color name="cellBg1">#f9d89d</color> -->
+    <color name="cellBg1">#f7dbaa</color>
+    <color name="cellBg2">#f7e6c8</color>
+
+    <!-- <color name="appBackgroundColor">#ffa449</color> -->
+    <color name="appBackgroundColor">#f7dbaa</color>
+    <color name="fieldMarginColor">#c6761f</color>
+    <color name="fieldMarginEdgeColor">#db8d39</color>
+    <color name="bottomBarDarkerColor">#ff9b38</color>
+    <color name="bottomBarBrighterColor">#ffa852</color>
+    <!-- <color name="googleButtonColor">#4285F4</color> -->
+
+    <color name="expressionBackgroundColor">#ffffff</color>
+    <color name="separatorColor">#f36c35</color>
+    <color name="liveResultColor">#f47c4a</color>
+</resources>
+

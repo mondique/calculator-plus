@@ -1,0 +1,4 @@
+<resources>
+    <integer name="fieldSize">8</integer>
+    <integer name="gameTempoDelay">400</integer>
+</resources>

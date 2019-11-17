@@ -1,0 +1,5 @@
+<resources>
+    <declare-styleable name="ColorChangingButton">
+        <attr name="colorState" format="integer" />
+    </declare-styleable>
+</resources>
