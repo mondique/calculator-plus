@@ -31,7 +31,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         activity = this
-        calculator.subscribe(presenter)
         presenter.subscribeView(view)
         val inputView = findViewById<EditText>(R.id.input)
         val liveResultView = findViewById<TextView>(R.id.liveResult)
@@ -303,8 +302,7 @@ interface IPresenterObserver {
 class Presenter(
     val calculator: Calculator,
     val viewSubscribers: MutableList<IPresenterObserver> = mutableListOf()
-) : ICalculatorObserver {
-
+) {
     fun subscribeView(subscriber: AppView) {
         viewSubscribers.add(subscriber)
     }
