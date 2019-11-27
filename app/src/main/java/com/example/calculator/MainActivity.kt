@@ -256,8 +256,8 @@ class AppView(
 
     override fun pushInteraction(input: String, result: String) {
         addTextToLayout(">>> " + input)
-        val resultExpression = addTextToLayout(result)
         if (result != "") {
+            val resultExpression = addTextToLayout(result)
             val resultBackground = activity.getResources().getDrawable(
                 R.drawable.expression_background, null)
             resultExpression.setBackground(resultBackground)
