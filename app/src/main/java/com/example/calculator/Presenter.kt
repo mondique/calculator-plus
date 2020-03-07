@@ -2,6 +2,7 @@ package com.example.calculator
 
 class Presenter(
     val calculator: Calculator,
+    val history: InteractionList, 
     val viewSubscribers: MutableList<IPresenterObserver> = mutableListOf()
 ) {
     fun subscribeView(subscriber: AppView) {
@@ -43,7 +44,7 @@ class Presenter(
     }
 
     fun onInputChanged(newInput: String) {
-        calculator.setInput(newInput)
+        calculator.inputExpression = newInput
         calculator.calculateResult()
         notifyUpdateLiveResult()
     }

@@ -1,5 +1,12 @@
 package com.example.calculator
 
+import android.content.Context
+import android.util.AttributeSet
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.widget.RelativeLayout
+import android.widget.TextView
+
 class LiveExpressionView(context: Context, attrs: AttributeSet) :
     RelativeLayout(context, attrs) {
 

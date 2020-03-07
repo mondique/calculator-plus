@@ -5,11 +5,7 @@ class Calculator(
 ) {
     var inputExpression: String = ""
     private var resultTree: ExpressionNode? = null
-    var result: Value? = null
-
-    fun setInput(newInput: String) {
-        inputExpression = newInput
-    }
+    private var result: Value? = null
 
     fun getLiveResultString(): String =
         if (result == null || result!!.isError() == true)

@@ -1,5 +1,15 @@
 package com.example.calculator
 
+import android.content.Context
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.util.AttributeSet
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.widget.EditText
+import android.widget.RelativeLayout
+import android.widget.TextView
+
 class ExpressionView(context: Context, attrs: AttributeSet) :
     RelativeLayout(context, attrs) {
 
@@ -15,14 +25,14 @@ class ExpressionView(context: Context, attrs: AttributeSet) :
 
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             val text: String = getTextView().text.toString()
-            val realText = if (text.length > 0 && text[0] == '>')
+            val realText = if (text.isNotEmpty() && text[0] == '>')
                 text.subSequence(4, text.length).toString()
                 else text
             val inputView = activity.findViewById<EditText>(R.id.input)
-            val inputText = inputView.getText().toString()
+            val inputText = inputView.text.toString()
             val inputSelection = InputPosition(
-                inputView.getSelectionStart(),
-                inputView.getSelectionEnd()
+                inputView.selectionStart,
+                inputView.selectionEnd
             )
             activity.view.onExpressionPressed(
                 realText,

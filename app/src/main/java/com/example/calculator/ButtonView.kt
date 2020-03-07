@@ -1,5 +1,13 @@
 package com.example.calculator
 
+import android.content.Context
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.util.AttributeSet
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.widget.*
+
 class ButtonView(context: Context, attrs: AttributeSet) :
     RelativeLayout(context, attrs) {
     

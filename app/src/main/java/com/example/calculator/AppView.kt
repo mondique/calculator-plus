@@ -1,5 +1,7 @@
 package com.example.calculator
 
+import android.widget.*
+
 interface IPresenterObserver {
     fun updateLiveResult(result: String) {}
     fun pushInteraction(input: String, result: String) {}
@@ -33,34 +35,7 @@ class AppView(
     }
 
     override fun pushInteraction(input: String, result: String) {
-        addTextToLayout(">>> " + input)
-        if (result != "") {
-            val resultExpression = addTextToLayout(result)
-            val resultBackground = activity.getResources().getDrawable(
-                R.drawable.expression_background, null)
-            resultExpression.setBackground(resultBackground)
-        }
-        resetInput()
-        val scrollView = activity.findViewById<ScrollView>(R.id.expressionsScrollView)
-        scrollView.post {
-            scrollView.fullScroll(android.view.View.FOCUS_DOWN)
-        }
-    }
-
-    fun addTextToLayout(text: String): ExpressionView {
-        val expressionsList = activity.findViewById<LinearLayout>(R.id.expressionsList)
-        val expressionView = activity.layoutInflater.inflate(
-            R.layout.expression,
-            expressionsList,
-            false
-        ) as ExpressionView
-        expressionView.getTextView().append(text)
-        expressionsList.addView(expressionView)
-        return expressionView
-    }
-
-    override fun resetInput() {
-        activity.findViewById<EditText>(R.id.input).setText("")
+        activity.respondToInput(input, result)
     }
 
     override fun updateInput(newInput: String, newInputPosition: InputPosition) {
