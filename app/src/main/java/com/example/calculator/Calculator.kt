@@ -23,7 +23,7 @@ class Calculator(
     }
 
     fun calculateResult() {
-        resultTree = parseString(inputExpression, scope)
+        resultTree = Parser(scope).parseString(inputExpression)
         result = calculateResultFromTree(resultTree, scope)
     }
 }

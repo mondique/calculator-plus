@@ -10,6 +10,7 @@ class Value(
     enum class Type {
         INT, DOUBLE, NAME, ERROR
     }
+
     constructor(rawVal: String) : this(
         getStringType(rawVal),
         rawVal.toDoubleOrNull(),
