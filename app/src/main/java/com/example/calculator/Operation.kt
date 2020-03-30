@@ -2,7 +2,7 @@ package com.example.calculator
 
 import kotlin.math.abs
 
-fun applyAssigns(resultTree: ExpressionNode?, scope: VariableScope) {
+fun applyAssigns(resultTree: Expression?, scope: VariableScope) {
     if (resultTree == null) return
     if (resultTree!!.isVal()) return
     if (resultTree!!.operation!!.type != Operation.Type.ASSIGN) {
@@ -19,7 +19,7 @@ fun applyAssigns(resultTree: ExpressionNode?, scope: VariableScope) {
 }
 
 fun calculateResultFromTree(
-    expression: ExpressionNode?,
+    expression: Expression?,
     scope: VariableScope
 ): Value? {
     if (expression == null)
@@ -42,6 +42,7 @@ fun calculateResultFromTree(
 }
 
 class Operation(val type: Type) {
+    constructor(oper: Token.Operator) : this(getType(oper.type)!!)
 
     val EPS: Float = (1e-7).toFloat()
 
@@ -49,13 +50,13 @@ class Operation(val type: Type) {
         ADD, SUBSTRACT, MULTIPLY, DIVIDE, REVERT, ASSIGN
     }
     companion object {
-        fun getType(c: Char): Type? = when (c) {
-            '+' -> Type.ADD
-            '-' -> Type.SUBSTRACT
-            '*' -> Type.MULTIPLY
-            '/' -> Type.DIVIDE
-            ':' -> Type.DIVIDE
-            '=' -> Type.ASSIGN
+        fun getType(c: String): Type? = when (c) {
+            "+" -> Type.ADD
+            "-" -> Type.SUBSTRACT
+            "*" -> Type.MULTIPLY
+            "/" -> Type.DIVIDE
+            ":" -> Type.DIVIDE
+            "=" -> Type.ASSIGN
             else -> null
         }
     }

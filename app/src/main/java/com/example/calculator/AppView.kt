@@ -28,7 +28,7 @@ class AppView(
     fun onDoneButtonPressed() {
         presenter.onDoneButtonPressed()
     }
-    
+
     override fun updateLiveResult(result: String) {
         val resultView = activity.findViewById<TextView>(R.id.liveResult)
         resultView.setText(result)

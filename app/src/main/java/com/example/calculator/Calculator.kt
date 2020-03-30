@@ -4,7 +4,7 @@ class Calculator(
     val scope: VariableScope = VariableScope()
 ) {
     var inputExpression: String = ""
-    private var resultTree: ExpressionNode? = null
+    private var resultTree: Expression? = null
     private var result: Value? = null
 
     fun getLiveResultString(): String =
@@ -23,8 +23,13 @@ class Calculator(
     }
 
     fun calculateResult() {
-        resultTree = Parser(scope).parseString(inputExpression)
-        result = calculateResultFromTree(resultTree, scope)
+        val errors: MutableList<String> = mutableListOf()
+        resultTree = Parser(errors).parse(inputExpression)
+        if (errors.isEmpty()) {
+            result = calculateResultFromTree(resultTree, scope)
+        } else {
+            result = Value(errors[0])
+        }
     }
 }
 

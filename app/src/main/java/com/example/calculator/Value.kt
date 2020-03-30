@@ -15,9 +15,25 @@ class Value(
         getStringType(rawVal),
         rawVal.toDoubleOrNull(),
         rawVal.toIntOrNull(),
-        getVariableName(rawVal, 0, rawVal.length - 1),
+        rawVal,
         rawVal
     ) {}
+
+    constructor(value: Int) : this(
+        Type.INT,
+        null,
+        value,
+        null,
+        null
+    )
+
+    constructor(value: Double) : this(
+        Type.DOUBLE,
+        value,
+        null,
+        null,
+        null
+    )
 
     companion object {
         fun getStringType(string: String): Type {
@@ -29,8 +45,7 @@ class Value(
             if (doubleVal != null) {
                 return Type.DOUBLE
             }
-            val nameVal = getVariableName(string, 0, string.length - 1)
-            if (nameVal != null && isValidName(nameVal)) {
+            if (isValidName(string)) {
                 return Type.NAME
             }
             return Type.ERROR
@@ -85,5 +100,39 @@ class Value(
             0
         }
     }
+}
+
+private fun isValidName(variableName: String): Boolean {
+    if (variableName.length == 0 ||
+        !IsValidFirstNameChar(variableName[0]) ||
+        variableName == "ERROR")
+        return false
+    for (c in variableName) {
+        if (!isValidNameChar(c))
+            return false
+    }
+    return true
+}
+
+private fun isValidNameChar(c: Char): Boolean {
+    if (c == '_')
+        return true
+    if (0 <= c - '0' && '9' - c >= 0)
+        return true
+    if (0 <= c - 'a' && 'z' - c >= 0)
+        return true
+    if (0 <= c - 'A' && 'Z' - c >= 0)
+        return true
+    return false
+}
+
+private fun IsValidFirstNameChar(c: Char): Boolean {
+    if (c == '_')
+        return true
+    if (0 <= c - 'a' && 'z' - c >= 0)
+        return true
+    if (0 <= c - 'A' && 'Z' - c >= 0)
+        return true
+    return false
 }
 

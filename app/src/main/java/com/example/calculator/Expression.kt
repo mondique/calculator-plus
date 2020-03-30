@@ -1,12 +1,14 @@
 package com.example.calculator
 
-class ExpressionNode(
+class Expression(
     val isValue: Boolean,
     val operation: Operation?,
-    val x: ExpressionNode?,
-    val y: ExpressionNode?,
+    val x: Expression?,
+    val y: Expression?,
     val value: Value?
 ) {
+
+    constructor(oper: Token.Operator, lhs: Expression?, rhs: Expression) : this(false, Operation(oper), lhs, rhs, null) {}
 
     constructor(value: Value) : this(true, null, null, null, value) {}
 

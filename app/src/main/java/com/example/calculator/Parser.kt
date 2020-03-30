@@ -2,255 +2,161 @@ package com.example.calculator
 
 import android.util.Log
 
-class Parser(val scope: VariableScope) {
-    fun parseString(text: String): ExpressionNode? {
-        return parseSubstring(text, 0, text.length - 1)
+class Parser(val errors: MutableList<String>) {
+    private var incompleteLhsOps: MutableList<ExpressionFactory> = mutableListOf()
+    private lateinit var lexerView: LexerView
+
+    fun parse(expression: String, hasToEnd: Boolean = true): Expression? {
+        return parse(LexerView(Lexer(expression)), hasToEnd)
     }
 
-    private fun parseSubstring(
-        text: String,
-        begin: Int,
-        end: Int
-    ): ExpressionNode? {
+    private fun parse(expression: LexerView, hasToEnd: Boolean): Expression? {
+        reset(expression)
+        return parse(hasToEnd)
+    }
 
-        if (begin > end)
+    private class LexerView(private val lexer: Lexer) {
+        private var curToken = lexer.getToken()
+
+        fun peek(): Token = curToken
+
+        fun getToken(): Token {
+            val result: Token = curToken
+            move()
+            return result
+        }
+
+        fun move() {
+            Log.e("TAG", "LexerView::Move")
+            if (curToken != Token.EOF) {
+                curToken = lexer.getToken()
+            }
+        }
+
+        fun reachedEnd(): Boolean = curToken == Token.EOF
+    }
+
+    private fun reset(expression: LexerView) {
+        incompleteLhsOps = mutableListOf()
+        lexerView = expression
+    }
+
+    private fun parse(hasToEnd: Boolean): Expression? {
+        while (!lexerView.reachedEnd()) {
+            Log.e("TAG", "parse::while ${lexerView.peek()}")
+            val lhs = parseMinExpression()
+            val oper = parseOperator()
+            Log.e("TAG", "parse::while after getting lhs=$lhs and oper=$oper")
+            if (lhs == null) {
+                if (oper == null) {
+                    throwError("invalid symbol")
+                    return null
+                }
+                if (!oper.canBeUnary()) {
+                    throwError("no lhs for operator ${oper.type}")
+                    return null
+                }
+                addUnaryOp(oper)
+                continue
+            }
+            if (oper == null) {
+                if (hasToEnd && !lexerView.reachedEnd()) {
+                    throwError("expression ends prematurely")
+                    return null
+                }
+                Log.e("TAG", "parse::while before completeLhsOps($lhs)")
+                return completeLhsOps(lhs)
+            }
+            Log.e("TAG", "Before Parser::addLhsOp with lhs=$lhs, oper=$oper")
+            addLhsOp(lhs, oper)
+        }
+        throwError("unexpected input end")
+        return null
+    }
+
+    private fun parseMinExpression(): Expression? {
+        val exprInParentheses: Expression? = parseExpressionInParentheses()
+        if (exprInParentheses != null) {
+            return exprInParentheses
+        }
+        val curToken: Token = lexerView.peek()
+        val result: Expression? = when(curToken) {
+            is Token.Identifier -> Expression(Value(curToken.name))
+            is Token.Integer -> Expression(Value(curToken.value))
+            is Token.FloatingPointNumber -> Expression(Value(curToken.value))
+            else -> null
+        }
+        if (result != null) {
+            lexerView.move()
+        }
+        return result
+        // TODO: Parse Brackets
+        // return Parser(errors).parse(lexerView, hasToEnd=false)
+    }
+
+    private fun parseExpressionInParentheses(): Expression? {
+        val openingParen: Token = lexerView.peek()
+        if (openingParen !is Token.Parenthesis || !openingParen.isOpening()) {
             return null
-
-        if (!isValidBracketSequence(text, begin, end))
-            return ExpressionNode(Value("ERROR: invalid bracket placement"))
-
-        if (text[begin] == ' ')
-            return parseSubstring(text, begin + 1, end)
-        if (text[end] == ' ')
-            return parseSubstring(text, begin, end - 1)
-
-        if (canDiscardMarginalBrackets(text, begin, end))
-            return parseSubstring(text, begin + 1, end - 1)
-
-        val substring = text.subSequence(begin, end + 1).toString()
-        if (substring.toDoubleOrNull() != null)
-        return ExpressionNode(Value(substring))
-
-        val assignIndex = findLeftmostSymbolOnLevelZero(text, begin, end, "=")
-        if (assignIndex != null) {
-            val variableName = getVariableName(text, begin, assignIndex - 1)
-            val rhs = parseSubstring(text, assignIndex + 1, end)
-            if (rhs == null)
-                return ExpressionNode(Value("ERROR: no RHS"))
-            if (variableName == null)
-                return ExpressionNode(Value("ERROR: enter variable name"))
-            if (!isValidName(variableName))
-                return ExpressionNode(Value("ERROR: invalid variable name: $variableName"))
-            return ExpressionNode(
-                false,
-                Operation(
-                    Operation.getType(text[assignIndex])!!),
-                ExpressionNode(Value(variableName)),
-                rhs,
-                null
-            )
         }
-
-        val addSubstractIndex = findRightmostSymbolOnLevelZero(text, begin, end, "+-")
-        if (addSubstractIndex != null && addSubstractIndex != begin) {
-            val lhs = parseSubstring(text, begin, addSubstractIndex - 1)
-            val rhs = parseSubstring(text, addSubstractIndex + 1, end)
-            if (lhs == null)
-                return ExpressionNode(Value("ERROR: no LHS"))
-            Log.e(TAG, "LHS is not null")
-            if (lhs.isVal() && lhs.getVal().isError())
-                return lhs
-            Log.e(TAG, "LHS is not error")
-            if (rhs == null)
-                return ExpressionNode(Value("ERROR: no RHS"))
-            if (rhs.isVal() && rhs.getVal().isError())
-                return rhs
-            Log.e(TAG, "LHS and RHS OK")
-            return ExpressionNode(
-                false,
-                Operation(Operation.getType(
-                              text[addSubstractIndex])!!), lhs, rhs,
-                null
-            )
+        lexerView.move()
+        val result: Expression? = Parser(errors).parse(lexerView, hasToEnd=false)
+        val closingParen: Token = lexerView.peek()
+        if (closingParen !is Token.Parenthesis || !closingParen.matches(openingParen)) {
+            throwError("no matching parenthesis for ${openingParen.type}")
+            return null
         }
-
-        val multiplyDivideIndex = findRightmostSymbolOnLevelZero(text, begin, end, "*/:")
-        if (multiplyDivideIndex != null) {
-            val lhs = parseSubstring(text, begin, multiplyDivideIndex - 1)
-            val rhs = parseSubstring(text, multiplyDivideIndex + 1, end)
-            if (lhs == null)
-                return ExpressionNode(Value("ERROR: no LHS"))
-            if (lhs.isVal() && lhs.getVal().isError())
-                return lhs
-            if (rhs == null)
-                return ExpressionNode(Value("ERROR: no RHS"))
-            if (rhs.isVal() && rhs.getVal().isError())
-                return rhs
-            return ExpressionNode(
-                false,
-                Operation(Operation.getType(
-                              text[multiplyDivideIndex])!!), lhs, rhs,
-                null
-            )
+        lexerView.move()
+        if (result == null) {
+            throwError("invalid (or empty) expression in parentheses")
         }
-
-        if (text[begin] == '-') {
-            val rhs = parseSubstring(text, begin + 1, end)
-            if (rhs == null)
-                return ExpressionNode(Value("ERROR: no RHS"))
-            if (rhs.isVal() && rhs.getVal().isError())
-                return rhs
-            return ExpressionNode(
-                false,
-                Operation(Operation.Type.REVERT),
-                null,
-                rhs,
-                null
-            )
-        }
-
-        val inputText = text.subSequence(begin, end + 1).toString()
-        val value: Value
-        if (Value.getStringType(inputText) == Value.Type.ERROR) {
-            value = Value("ERROR: \"$inputText\" is not a valid expression")
-        } else {
-            value = Value(inputText)
-        }
-        return ExpressionNode(value)
+        return result
     }
-}
 
-
-fun getVariableName(text: String, begin: Int, end: Int): String? {
-    if (begin > end)
+    private fun parseOperator(): Token.Operator? {
+        val result: Token = lexerView.peek()
+        if (result is Token.Operator) {
+            lexerView.move()
+            return result
+        }
         return null
-
-    if (text[begin] == ' ')
-        return getVariableName(text, begin + 1, end)
-    if (text[end] == ' ')
-        return getVariableName(text, begin, end - 1)
-
-    if (canDiscardMarginalBrackets(text, begin, end))
-        return getVariableName(text, begin + 1, end - 1)
-
-    return text.subSequence(begin, end + 1).toString()
-}
-
-fun isValidName(variableName: String): Boolean {
-    if (variableName.length == 0 ||
-        !IsValidFirstNameChar(variableName[0]) ||
-        variableName == "ERROR")
-        return false
-    for (c in variableName) {
-        if (!isValidNameChar(c))
-            return false
     }
-    return true
-}
 
-private fun isValidNameChar(c: Char): Boolean {
-    if (c == '_')
-        return true
-    if (0 <= c - '0' && '9' - c >= 0)
-        return true
-    if (0 <= c - 'a' && 'z' - c >= 0)
-        return true
-    if (0 <= c - 'A' && 'Z' - c >= 0)
-        return true
-    return false
-}
-
-private fun IsValidFirstNameChar(c: Char): Boolean {
-    if (c == '_')
-        return true
-    if (0 <= c - 'a' && 'z' - c >= 0)
-        return true
-    if (0 <= c - 'A' && 'Z' - c >= 0)
-        return true
-    return false
-}
-
-private fun isDigit(c: Char): Boolean =
-    (c - '0') >= 0 && ('9' - c) >= 0
-
-private fun isSign(c: Char): Boolean =
-    Operation.getType(c) != null
-
-private fun isValidBracketSequence(
-    text: String, begin: Int, end: Int): Boolean {
-    var bracketsBalance = 0
-    var index = end
-    while (index >= begin) {
-        bracketsBalance += when (text[index]) {
-            '(' -> -1
-              ')' -> 1
-            else -> 0
+    private fun addUnaryOp(oper: Token.Operator) {
+        if (!incompleteLhsOps.isEmpty() &&
+            incompleteLhsOps.last().isHigherPriorityThanRightHandUnary(oper)) {
+            throwError("unary operator with lower priority met: $oper")
+            return
         }
-        if (bracketsBalance < 0)
-            return false
-        index -= 1
+        incompleteLhsOps.add(ExpressionFactory(oper))
     }
-    if (bracketsBalance != 0)
-        return false
-    return true
-}
 
-private fun canDiscardMarginalBrackets(
-    text: String, begin: Int, end: Int): Boolean {
-    if (text[begin] != '(' || text[end] != ')')
-        return false
-    var bracketsBalance = 0
-    var index = end
-    while (index >= begin) {
-        bracketsBalance += when (text[index]) {
-            '(' -> -1
-              ')' -> 1
-            else -> 0
-        }
-        if (index != begin && bracketsBalance == 0)
-            return false
-        index -= 1
+    private fun addLhsOp(lhs: Expression, oper: Token.Operator) {
+        val realLhs = combineHigherPriorityLhsOps(lhs, oper)
+        incompleteLhsOps.add(ExpressionFactory(realLhs, oper))
     }
-    return true
-}
 
-private fun findLeftmostSymbolOnLevelZero(
-    text: String, begin: Int, end: Int, charset: String): Int? {
-    var bracketsBalance = 0
-    var index = begin
-    while (index <= end) {
-        bracketsBalance += when (text[index]) {
-            '(' -> 1
-              ')' -> -1
-            else -> 0
+    private fun combineHigherPriorityLhsOps(lhs: Expression, oper: Token.Operator): Expression {
+        var finalLhs = lhs
+        while (!incompleteLhsOps.isEmpty() &&
+               incompleteLhsOps.last().isHigherPriorityThanRightHandBinary(oper)) {
+            finalLhs = incompleteLhsOps.last().complete(finalLhs)
+            incompleteLhsOps.removeAt(incompleteLhsOps.lastIndex)
         }
-        if (bracketsBalance == 0 &&
-            text[index] in charset)
-            break
-        index += 1
+        return finalLhs
     }
-    if (index > end)
-        return null
-    return index
-}
 
-private fun findRightmostSymbolOnLevelZero(
-    text: String, begin: Int, end: Int, charset: String): Int? {
-    var bracketsBalance = 0
-    var index = end
-    while (index >= begin) {
-        bracketsBalance += when (text[index]) {
-            '(' -> -1
-              ')' -> 1
-            else -> 0
+    private fun completeLhsOps(rhs: Expression): Expression {
+        var result = rhs
+        while (!incompleteLhsOps.isEmpty()) {
+            result = incompleteLhsOps.last().complete(result)
+            incompleteLhsOps.removeAt(incompleteLhsOps.lastIndex)
         }
-        if (bracketsBalance == 0 &&
-            text[index] in charset)
-            break
-        index -= 1
+        return result
     }
-    if (index < begin)
-        return null
-    return index
+
+    private fun throwError(error: String) {
+        errors.add(error)
+    }
 }
 
