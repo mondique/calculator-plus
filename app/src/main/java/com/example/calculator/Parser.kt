@@ -90,8 +90,6 @@ class Parser(val errors: MutableList<String>) {
             lexerView.move()
         }
         return result
-        // TODO: Parse Brackets
-        // return Parser(errors).parse(lexerView, hasToEnd=false)
     }
 
     private fun parseExpressionInParentheses(): Expression? {
