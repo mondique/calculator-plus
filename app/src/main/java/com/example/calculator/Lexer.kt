@@ -94,7 +94,7 @@ class Lexer(private val source: String) {
     }
 
     private fun isValidNumberChar(c: Char): Boolean =
-        isDigit(c) || c == 'e' || c == 'E'
+        isDigit(c) || c == '.' || c == 'e' || c == 'E'
 
     private fun getOperatorOrNull(): Token? {
         Log.e("TAG", "getOperatorOrNull")
