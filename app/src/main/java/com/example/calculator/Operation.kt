@@ -1,153 +1,123 @@
 package com.example.calculator
 
-import kotlin.math.abs
-
 fun applyAssigns(resultTree: Expression?, scope: VariableScope) {
     if (resultTree == null) return
-    if (resultTree!!.isVal()) return
-    if (resultTree!!.operation!!.type != Operation.Type.ASSIGN) {
-        applyAssigns(resultTree!!.x, scope)
-        applyAssigns(resultTree!!.y, scope)
+    if (resultTree.isVal()) return
+    if (resultTree.operation!!.type != Operation.Type.ASSIGN) {
+        applyAssigns(resultTree.x, scope)
+        applyAssigns(resultTree.y, scope)
         return
     }
-    if (resultTree!!.x == null) return
-    if (!resultTree!!.x!!.isVal()) return
-    if (resultTree!!.x!!.getVal().valType != Value.Type.NAME) return
-    val rhs = calculateResultFromTree(resultTree.y, scope)
-    if (rhs == null || rhs.isError()) return
-    scope.addVariable(resultTree.x!!.getVal().toName(), rhs)
+    applyAssigns(resultTree.y, scope)
+    if (resultTree.x == null) return
+    if (!resultTree.x.isVal()) return
+    val lhs = resultTree.x.getVal()
+    if (lhs !is Value.Variable) return
+    try {
+        val rhs = calculateResultFromTree(resultTree.y!!, scope)
+        scope.addVariable(lhs.name, rhs)
+    } catch(e: CalculationError) {}
 }
 
+// may throw
 fun calculateResultFromTree(
-    expression: Expression?,
+    expression: Expression,
     scope: VariableScope
-): Value? {
-    if (expression == null)
-        return null
+): Value.Number {
     if (expression.isVal()) {
-        if (expression.getVal().valType == Value.Type.NAME) {
-            val variableName = expression.getVal().toName()
+        val exprVal: Value = expression.getVal()
+        if (exprVal is Value.Variable) {
+            val variableName = exprVal.name
             if (variableName in scope) {
-                return scope.getValue(variableName)
+                return scope.getValue(variableName)!!
             } else {
-                return Value("ERROR: variable $variableName not found")
+                throw CalculationError("variable $variableName not found")
             }
         }
-        return expression.getVal()
+        return exprVal as Value.Number
     }
-    return expression.operation!!.apply(
-        calculateResultFromTree(expression.x, scope),
-        calculateResultFromTree(expression.y, scope)
-    )
+    val lhs = calculateResultFromTree(expression.x!!, scope)
+    val rhs = calculateResultFromTree(expression.y!!, scope)
+    return expression.operation!!.apply(lhs, rhs)
 }
 
 class Operation(val type: Type) {
     constructor(oper: Token.Operator) : this(getType(oper.type)!!)
 
-    val EPS: Float = (1e-7).toFloat()
-
     enum class Type {
-        ADD, SUBSTRACT, MULTIPLY, DIVIDE, REVERT, ASSIGN
+        ADD, SUBTRACT, MULTIPLY, DIVIDE, REVERT, ASSIGN
     }
     companion object {
         fun getType(c: String): Type? = when (c) {
-            "+" -> Type.ADD
-            "-" -> Type.SUBSTRACT
-            "*" -> Type.MULTIPLY
-            "/" -> Type.DIVIDE
-            ":" -> Type.DIVIDE
-            "=" -> Type.ASSIGN
-            else -> null
-        }
+                "+" -> Type.ADD
+                "-" -> Type.SUBTRACT
+                "*" -> Type.MULTIPLY
+                "/" -> Type.DIVIDE
+                ":" -> Type.DIVIDE
+                "=" -> Type.ASSIGN
+                else -> null
+            }
     }
 
-    fun apply(x: Value?, y: Value?): Value? {
-        return when (type) {
+    fun apply(x: Value.Number, y: Value.Number): Value.Number = when (type) {
             Type.ADD -> add(x, y)
-            Type.SUBSTRACT -> substract(x, y)
+            Type.SUBTRACT -> substract(x, y)
             Type.MULTIPLY -> multiply(x, y)
             Type.DIVIDE -> divide(x, y)
             Type.REVERT -> revert(x, y)
             Type.ASSIGN -> assign(x, y)
         }
-    }
 
-    fun add(x: Value?, y: Value?): Value? {
-        if (x == null || y == null)
-            return null
-        if (x.isError())
-            return x
-        if (y.isError())
-            return y
-        if (x.valType == Value.Type.DOUBLE ||
-            y.valType == Value.Type.DOUBLE) {
-            return Value((x.toDouble()!! + y.toDouble()!!).toString())
+    fun add(x: Value.Number, y: Value.Number): Value.Number {
+        if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
+            return Value.Number.RealNumber(x.toRealNumber().value + y.toRealNumber().value)
         }
-        return Value((x.toInt()!!.toLong() + y.toInt()!!.toLong()).toString())
+        val a = x as Value.Number.Integer
+        val b = y as Value.Number.Integer
+        return Value.Number.Integer(a.value + b.value)
     }
 
-    fun substract(x: Value?, y: Value?): Value? {
-        if (x == null || y == null)
-            return null
-        if (x.isError())
-            return x
-        if (y.isError())
-            return y
-        if (x.valType == Value.Type.DOUBLE ||
-            y.valType == Value.Type.DOUBLE) {
-            return Value((x.toDouble()!! - y.toDouble()!!).toString())
+    fun substract(x: Value.Number, y: Value.Number): Value.Number {
+        if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
+            return Value.Number.RealNumber(x.toRealNumber().value - y.toRealNumber().value)
         }
-        return Value((x.toInt()!!.toLong() - y.toInt()!!.toLong()).toString())
+        val a = x as Value.Number.Integer
+        val b = y as Value.Number.Integer
+        return Value.Number.Integer(a.value - b.value)
     }
 
-    fun multiply(x: Value?, y: Value?): Value? {
-        if (x == null || y == null)
-            return null
-        if (x.isError())
-            return x
-        if (y.isError())
-            return y
-        if (x.valType == Value.Type.DOUBLE ||
-            y.valType == Value.Type.DOUBLE) {
-            return Value((x.toDouble()!! * y.toDouble()!!).toString())
+    fun multiply(x: Value.Number, y: Value.Number): Value.Number {
+        if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
+            return Value.Number.RealNumber(x.toRealNumber().value * y.toRealNumber().value)
         }
-        return Value((x.toInt()!!.toLong() * y.toInt()!!.toLong()).toString())
+        val a = x as Value.Number.Integer
+        val b = y as Value.Number.Integer
+        return Value.Number.Integer(a.value * b.value)
     }
 
-    fun divide(x: Value?, y: Value?): Value? {
-        if (x == null || y == null)
-            return null
-        if (x.isError())
-            return x
-        if (y.isError())
-            return y
-        if (x.valType == Value.Type.DOUBLE ||
-            y.valType == Value.Type.DOUBLE) {
-            val yDouble = y.toDouble()!!
-            if (abs(yDouble) < EPS) //>
-                return null
-            return Value((x.toDouble()!! / yDouble).toString())
+    fun divide(x: Value.Number, y: Value.Number): Value.Number {
+        if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
+            if (y.toRealNumber().value == 0.0) {
+                throw CalculationError("division by 0")
+            }
+            return Value.Number.RealNumber(x.toRealNumber().value / y.toRealNumber().value)
         }
-        val yInt = y.toInt()!!
-        if (yInt == 0)
-            return null
-        val xInt = x.toInt()!!
-        if (xInt % yInt == 0)
-            return Value((xInt / yInt).toString())
-        return Value((x.toDouble()!! / yInt).toString())
+        val a = x as Value.Number.Integer
+        val b = y as Value.Number.Integer
+        if (b.value == 0) {
+            throw CalculationError("division by 0")
+        }
+        if (a.value % b.value == 0) {
+            return Value.Number.Integer(a.value / b.value)
+        }
+        return Value.Number.RealNumber(a.value.toDouble() / b.value.toDouble())
     }
 
-    fun revert(x: Value?, y: Value?): Value? {
-        if (y == null)
-            return null
-        if (x?.isError() == true)
-            return x
-        if (y.isError())
-            return y
-        if (y.valType == Value.Type.DOUBLE)
-            return Value((-(y.toDouble()!!)).toString())
-        return Value((-(y.toInt()!!)).toString())
+    fun revert(x: Value.Number, y: Value.Number): Value.Number = when(y) {
+            is Value.Number.RealNumber -> Value.Number.RealNumber(-y.value)
+            is Value.Number.Integer -> Value.Number.Integer(-y.value)
     }
 
-    fun assign(x: Value?, y: Value?): Value? = y
+    fun assign(x: Value.Number, y: Value.Number): Value.Number = y
 }
+

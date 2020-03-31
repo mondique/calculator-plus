@@ -81,9 +81,9 @@ class Parser(val errors: MutableList<String>) {
         }
         val curToken: Token = lexerView.peek()
         val result: Expression? = when(curToken) {
-            is Token.Identifier -> Expression(Value(curToken.name))
-            is Token.Integer -> Expression(Value(curToken.value))
-            is Token.FloatingPointNumber -> Expression(Value(curToken.value))
+            is Token.Identifier -> Expression(Value.Variable(curToken.name))
+            is Token.Integer -> Expression(Value.Number.Integer(curToken.value))
+            is Token.FloatingPointNumber -> Expression(Value.Number.RealNumber(curToken.value))
             else -> null
         }
         if (result != null) {

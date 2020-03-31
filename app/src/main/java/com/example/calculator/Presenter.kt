@@ -2,7 +2,7 @@ package com.example.calculator
 
 class Presenter(
     val calculator: Calculator,
-    val history: InteractionList, 
+    val history: InteractionList,
     val viewSubscribers: MutableList<IPresenterObserver> = mutableListOf()
 ) {
     fun subscribeView(subscriber: AppView) {
@@ -40,7 +40,7 @@ class Presenter(
         val inputAfterSelection = input.subSequence(inputPosition.end, input.length).toString()
         val newInput = inputBeforeSelection + expressionText + inputAfterSelection
         val newInputPosition = InputPosition(inputPosition.start + expressionText.length)
-        notifyUpdateInput(newInput, newInputPosition)        
+        notifyUpdateInput(newInput, newInputPosition)
     }
 
     fun onInputChanged(newInput: String) {
@@ -59,8 +59,7 @@ class Presenter(
         calculator.applyAssigns()
         notifyPushInput()
         notifyResetInput()
-        calculator.resetInput()
-        calculator.calculateResult()
+        calculator.reset()
         notifyUpdateLiveResult()
     }
 
@@ -68,8 +67,8 @@ class Presenter(
         for (subscriber in viewSubscribers) {
             val result = calculator.getLiveResultString()
             subscriber.updateLiveResult(result)
-        }    
-    }    
+        }
+    }
 
     fun notifyPushInput() {
         for (subscriber in viewSubscribers) {
