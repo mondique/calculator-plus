@@ -15,6 +15,25 @@ sealed class Token {
 
         fun getUnaryCalcDir(): Direction = Direction.RightToLeft
 
+        fun toUnaryOperator(): UnaryOperator? = when(type) {
+            "+" -> UnaryOperator.Add()
+            "-" -> UnaryOperator.Revert()
+            "~" -> UnaryOperator.BitwiseRevert()
+            else -> null
+        }
+
+        fun toBinaryOperator(): BinaryOperator? = when(type) {
+            "^" -> BinaryOperator.Xor()
+            "+" -> BinaryOperator.Add()
+            "-" -> BinaryOperator.Subtract()
+            "*" -> BinaryOperator.Multiply()
+            "/" -> BinaryOperator.Divide()
+            "%" -> BinaryOperator.Mod()
+            "**" -> BinaryOperator.Power()
+            "=" -> BinaryOperator.Assign()
+            else -> null
+        }
+
         fun canBeBinary(): Boolean =
             getBinaryPriority() != -1
 
@@ -37,7 +56,6 @@ sealed class Token {
 
         fun getUnaryPriority(): Int =
             when(type) {
-                "!" -> 3
                 "+" -> 11
                 "-" -> 11
                 "~" -> 12

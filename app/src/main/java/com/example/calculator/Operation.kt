@@ -1,9 +1,11 @@
 package com.example.calculator
 
+import kotlin.math.pow
+
 fun applyAssigns(resultTree: Expression?, scope: VariableScope) {
     if (resultTree == null) return
     if (resultTree.isVal()) return
-    if (resultTree.operation!!.type != Operation.Type.ASSIGN) {
+    if (resultTree.oper!! !is BinaryOperator.Assign) {
         applyAssigns(resultTree.x, scope)
         applyAssigns(resultTree.y, scope)
         return
@@ -36,88 +38,144 @@ fun calculateResultFromTree(
         }
         return exprVal as Value.Number
     }
-    val lhs = calculateResultFromTree(expression.x!!, scope)
+    if (expression.x == null) {
+        val rhs = calculateResultFromTree(expression.y!!, scope)
+        return (expression.oper!! as UnaryOperator).apply(rhs)
+    }
+    val lhs = calculateResultFromTree(expression.x, scope)
     val rhs = calculateResultFromTree(expression.y!!, scope)
-    return expression.operation!!.apply(lhs, rhs)
+    return (expression.oper!! as BinaryOperator).apply(lhs, rhs)
 }
 
-class Operation(val type: Type) {
-    constructor(oper: Token.Operator) : this(getType(oper.type)!!)
+sealed class Operator()
 
-    enum class Type {
-        ADD, SUBTRACT, MULTIPLY, DIVIDE, REVERT, ASSIGN
+sealed class UnaryOperator() : Operator() {
+    abstract fun apply(x: Value.Number): Value.Number
+
+    class Add : UnaryOperator() {
+        override fun apply(x: Value.Number): Value.Number = x
     }
-    companion object {
-        fun getType(c: String): Type? = when (c) {
-                "+" -> Type.ADD
-                "-" -> Type.SUBTRACT
-                "*" -> Type.MULTIPLY
-                "/" -> Type.DIVIDE
-                ":" -> Type.DIVIDE
-                "=" -> Type.ASSIGN
-                else -> null
+
+    class Revert : UnaryOperator() {
+        override fun apply(x: Value.Number): Value.Number = when(x) {
+            is Value.Number.RealNumber -> Value.Number.RealNumber(-x.value)
+            is Value.Number.Integer -> Value.Number.Integer(-x.value)
+        }
+    }
+
+    class BitwiseRevert : UnaryOperator() {
+        override fun apply(x: Value.Number): Value.Number = when(x) {
+            is Value.Number.RealNumber -> throw CalculationError("~ is not applicable to real numbers")
+            is Value.Number.Integer -> Value.Number.Integer(x.value.inv())
+        }
+    }
+}
+
+sealed class BinaryOperator() : Operator() {
+    abstract fun apply(x: Value.Number, y: Value.Number): Value.Number
+
+    class Xor : BinaryOperator() {
+        override fun apply(x: Value.Number, y: Value.Number): Value.Number {
+            if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
+                throw CalculationError("^ is not applicable to real numbers")
             }
+            val a = x as Value.Number.Integer
+            val b = y as Value.Number.Integer
+            return Value.Number.Integer(a.value xor b.value)
+        }
     }
 
-    fun apply(x: Value.Number, y: Value.Number): Value.Number = when (type) {
-            Type.ADD -> add(x, y)
-            Type.SUBTRACT -> substract(x, y)
-            Type.MULTIPLY -> multiply(x, y)
-            Type.DIVIDE -> divide(x, y)
-            Type.REVERT -> revert(x, y)
-            Type.ASSIGN -> assign(x, y)
+    class Add : BinaryOperator() {
+        override fun apply(x: Value.Number, y: Value.Number): Value.Number {
+            if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
+                return Value.Number.RealNumber(x.toRealNumber().value + y.toRealNumber().value)
+            }
+            val a = x as Value.Number.Integer
+            val b = y as Value.Number.Integer
+            return Value.Number.Integer(a.value + b.value)
         }
-
-    fun add(x: Value.Number, y: Value.Number): Value.Number {
-        if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
-            return Value.Number.RealNumber(x.toRealNumber().value + y.toRealNumber().value)
-        }
-        val a = x as Value.Number.Integer
-        val b = y as Value.Number.Integer
-        return Value.Number.Integer(a.value + b.value)
     }
 
-    fun substract(x: Value.Number, y: Value.Number): Value.Number {
-        if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
-            return Value.Number.RealNumber(x.toRealNumber().value - y.toRealNumber().value)
+    class Subtract : BinaryOperator() {
+        override fun apply(x: Value.Number, y: Value.Number): Value.Number {
+            if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
+                return Value.Number.RealNumber(x.toRealNumber().value - y.toRealNumber().value)
+            }
+            val a = x as Value.Number.Integer
+            val b = y as Value.Number.Integer
+            return Value.Number.Integer(a.value - b.value)
         }
-        val a = x as Value.Number.Integer
-        val b = y as Value.Number.Integer
-        return Value.Number.Integer(a.value - b.value)
     }
 
-    fun multiply(x: Value.Number, y: Value.Number): Value.Number {
-        if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
-            return Value.Number.RealNumber(x.toRealNumber().value * y.toRealNumber().value)
+    class Multiply : BinaryOperator() {
+        override fun apply(x: Value.Number, y: Value.Number): Value.Number {
+            if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
+                return Value.Number.RealNumber(x.toRealNumber().value * y.toRealNumber().value)
+            }
+            val a = x as Value.Number.Integer
+            val b = y as Value.Number.Integer
+            return Value.Number.Integer(a.value * b.value)
         }
-        val a = x as Value.Number.Integer
-        val b = y as Value.Number.Integer
-        return Value.Number.Integer(a.value * b.value)
     }
 
-    fun divide(x: Value.Number, y: Value.Number): Value.Number {
-        if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
-            if (y.toRealNumber().value == 0.0) {
+    class Divide : BinaryOperator() {
+        override fun apply(x: Value.Number, y: Value.Number): Value.Number {
+            if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
+                if (y.toRealNumber().value == 0.0) {
+                    throw CalculationError("division by 0")
+                }
+                return Value.Number.RealNumber(x.toRealNumber().value / y.toRealNumber().value)
+            }
+            val a = x as Value.Number.Integer
+            val b = y as Value.Number.Integer
+            if (b.value == 0) {
                 throw CalculationError("division by 0")
             }
-            return Value.Number.RealNumber(x.toRealNumber().value / y.toRealNumber().value)
+            if (a.value % b.value == 0) {
+                return Value.Number.Integer(a.value / b.value)
+            }
+            return Value.Number.RealNumber(a.value.toDouble() / b.value.toDouble())
         }
-        val a = x as Value.Number.Integer
-        val b = y as Value.Number.Integer
-        if (b.value == 0) {
-            throw CalculationError("division by 0")
-        }
-        if (a.value % b.value == 0) {
-            return Value.Number.Integer(a.value / b.value)
-        }
-        return Value.Number.RealNumber(a.value.toDouble() / b.value.toDouble())
     }
 
-    fun revert(x: Value.Number, y: Value.Number): Value.Number = when(y) {
-            is Value.Number.RealNumber -> Value.Number.RealNumber(-y.value)
-            is Value.Number.Integer -> Value.Number.Integer(-y.value)
+    class Mod : BinaryOperator() {
+        override fun apply(x: Value.Number, y: Value.Number): Value.Number {
+            if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
+                throw CalculationError("% is not applicable to real numbers")
+            }
+            val a = x as Value.Number.Integer
+            val b = y as Value.Number.Integer
+            if (b.value == 0) {
+                throw CalculationError("division by 0")
+            }
+            return Value.Number.Integer(a.value % b.value)
+        }
     }
 
-    fun assign(x: Value.Number, y: Value.Number): Value.Number = y
+    class Power : BinaryOperator() {
+        override fun apply(x: Value.Number, y: Value.Number): Value.Number {
+            if (y.toRealNumber().value == 0.0) {
+                return if (x is Value.Number.Integer && y is Value.Number.Integer)
+                    Value.Number.Integer(1) else Value.Number.RealNumber(1.0)
+            }
+            if (y.toRealNumber().value < 0.0 && x.toRealNumber().value == 0.0) {
+                throw CalculationError("division by 0")
+            }
+            if (x is Value.Number.Integer && y is Value.Number.Integer) {
+                return Value.Number.Integer(x.value.toDouble().pow(y.value))
+            }
+            if (y is Value.Number.Integer) {
+                val a = x as Value.Number.RealNumber
+                return Value.Number.Integer(a.value.pow(y.value))
+            }
+            val a = x as Value.Number.RealNumber
+            val b = y as Value.Number.RealNumber
+            return Value.Number.RealNumber(a.value.pow(b.value))
+        }
+    }
+
+    class Assign : BinaryOperator() {
+        override fun apply(x: Value.Number, y: Value.Number): Value.Number = y
+    }
 }
 

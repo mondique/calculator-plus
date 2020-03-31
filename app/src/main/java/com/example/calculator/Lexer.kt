@@ -8,7 +8,6 @@ class Lexer(private val source: String) {
     private var afterSpace: Boolean = false
 
     fun getToken(): Token {
-        Log.e("TAG", "$pos")
         while (pos != source.length && source[pos] == ' ') {
             afterSpace = true
             pos++
@@ -97,7 +96,6 @@ class Lexer(private val source: String) {
         isDigit(c) || c == '.' || c == 'e' || c == 'E'
 
     private fun getOperatorOrNull(): Token? {
-        Log.e("TAG", "getOperatorOrNull")
         var length: Int = min(3, source.length - pos)
         while (length > 0) {
             val result = Token.Operator(source.subSequence(pos, pos + length).toString())
