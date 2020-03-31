@@ -4,8 +4,8 @@ class Calculator(
     val scope: VariableScope = VariableScope()
 ) {
     var inputExpression: String = ""
-    private var resultTree: Expression? = null
-    private var result: Value? = null
+    private var resultTree: IExpression? = null
+    private var result: Value.Number? = null
     private var error: String? = null
 
     init {
@@ -21,7 +21,7 @@ class Calculator(
         if (error == null) result.toString() else error!!
 
     fun applyAssigns() {
-        applyAssigns(resultTree, scope)
+        resultTree?.applyAssigns(scope)
     }
 
     fun reset() {
@@ -35,7 +35,7 @@ class Calculator(
         resultTree = Parser(errors).parse(inputExpression)
         if (errors.isEmpty()) {
             try {
-                result = calculateResultFromTree(resultTree!!, scope)
+                result = resultTree!!.calcValue(scope)
             } catch(e: CalculationError) {
                 result = null
                 error = e.message

@@ -15,22 +15,22 @@ sealed class Token {
 
         fun getUnaryCalcDir(): Direction = Direction.RightToLeft
 
-        fun toUnaryOperator(): UnaryOperator? = when(type) {
-            "+" -> UnaryOperator.Add()
-            "-" -> UnaryOperator.Revert()
-            "~" -> UnaryOperator.BitwiseRevert()
+        fun toUnaryOperator(): IUnaryOperator? = when(type) {
+            "+" -> IUnaryOperator.Add()
+            "-" -> IUnaryOperator.Revert()
+            "~" -> IUnaryOperator.BitwiseRevert()
             else -> null
         }
 
-        fun toBinaryOperator(): BinaryOperator? = when(type) {
-            "^" -> BinaryOperator.Xor()
-            "+" -> BinaryOperator.Add()
-            "-" -> BinaryOperator.Subtract()
-            "*" -> BinaryOperator.Multiply()
-            "/" -> BinaryOperator.Divide()
-            "%" -> BinaryOperator.Mod()
-            "**" -> BinaryOperator.Power()
-            "=" -> BinaryOperator.Assign()
+        fun toBinaryOperator(): IBinaryOperator? = when(type) {
+            "^" -> IBinaryOperator.Xor()
+            "+" -> IBinaryOperator.Add()
+            "-" -> IBinaryOperator.Subtract()
+            "*" -> IBinaryOperator.Multiply()
+            "/" -> IBinaryOperator.Divide()
+            "%" -> IBinaryOperator.Mod()
+            "**" -> IBinaryOperator.Power()
+            "=" -> IBinaryOperator.Assign()
             else -> null
         }
 

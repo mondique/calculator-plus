@@ -6,11 +6,11 @@ class Parser(val errors: MutableList<String>) {
     private var incompleteLhsOps: MutableList<ExpressionFactory> = mutableListOf()
     private lateinit var lexerView: LexerView
 
-    fun parse(expression: String, hasToEnd: Boolean = true): Expression? {
+    fun parse(expression: String, hasToEnd: Boolean = true): IExpression? {
         return parse(LexerView(Lexer(expression)), hasToEnd)
     }
 
-    private fun parse(expression: LexerView, hasToEnd: Boolean): Expression? {
+    private fun parse(expression: LexerView, hasToEnd: Boolean): IExpression? {
         reset(expression)
         return parse(hasToEnd)
     }
@@ -41,7 +41,7 @@ class Parser(val errors: MutableList<String>) {
         lexerView = expression
     }
 
-    private fun parse(hasToEnd: Boolean): Expression? {
+    private fun parse(hasToEnd: Boolean): IExpression? {
         while (!lexerView.reachedEnd()) {
             Log.e("TAG", "parse::while ${lexerView.peek()}")
             val lhs = parseMinExpression()
@@ -74,16 +74,16 @@ class Parser(val errors: MutableList<String>) {
         return null
     }
 
-    private fun parseMinExpression(): Expression? {
-        val exprInParentheses: Expression? = parseExpressionInParentheses()
+    private fun parseMinExpression(): IExpression? {
+        val exprInParentheses: IExpression? = parseExpressionInParentheses()
         if (exprInParentheses != null) {
             return exprInParentheses
         }
         val curToken: Token = lexerView.peek()
-        val result: Expression? = when(curToken) {
-            is Token.Identifier -> Expression(Value.Variable(curToken.name))
-            is Token.Integer -> Expression(Value.Number.Integer(curToken.value))
-            is Token.FloatingPointNumber -> Expression(Value.Number.RealNumber(curToken.value))
+        val result: IExpression? = when(curToken) {
+            is Token.Identifier -> Value.Variable(curToken.name)
+            is Token.Integer -> Value.Number.Integer(curToken.value)
+            is Token.FloatingPointNumber -> Value.Number.RealNumber(curToken.value)
             else -> null
         }
         if (result != null) {
@@ -92,13 +92,13 @@ class Parser(val errors: MutableList<String>) {
         return result
     }
 
-    private fun parseExpressionInParentheses(): Expression? {
+    private fun parseExpressionInParentheses(): IExpression? {
         val openingParen: Token = lexerView.peek()
         if (openingParen !is Token.Parenthesis || !openingParen.isOpening()) {
             return null
         }
         lexerView.move()
-        val result: Expression? = Parser(errors).parse(lexerView, hasToEnd=false)
+        val result: IExpression? = Parser(errors).parse(lexerView, hasToEnd=false)
         val closingParen: Token = lexerView.peek()
         if (closingParen !is Token.Parenthesis || !closingParen.matches(openingParen)) {
             throwError("no matching parenthesis for ${openingParen.type}")
@@ -129,12 +129,12 @@ class Parser(val errors: MutableList<String>) {
         incompleteLhsOps.add(ExpressionFactory(oper))
     }
 
-    private fun addLhsOp(lhs: Expression, oper: Token.Operator) {
+    private fun addLhsOp(lhs: IExpression, oper: Token.Operator) {
         val realLhs = combineHigherPriorityLhsOps(lhs, oper)
         incompleteLhsOps.add(ExpressionFactory(realLhs, oper))
     }
 
-    private fun combineHigherPriorityLhsOps(lhs: Expression, oper: Token.Operator): Expression {
+    private fun combineHigherPriorityLhsOps(lhs: IExpression, oper: Token.Operator): IExpression {
         var finalLhs = lhs
         while (!incompleteLhsOps.isEmpty() &&
                incompleteLhsOps.last().isHigherPriorityThanRightHandBinary(oper)) {
@@ -144,7 +144,7 @@ class Parser(val errors: MutableList<String>) {
         return finalLhs
     }
 
-    private fun completeLhsOps(rhs: Expression): Expression {
+    private fun completeLhsOps(rhs: IExpression): IExpression {
         var result = rhs
         while (!incompleteLhsOps.isEmpty()) {
             result = incompleteLhsOps.last().complete(result)

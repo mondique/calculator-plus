@@ -1,10 +1,13 @@
 package com.example.calculator
 
-class ExpressionFactory(val lhs: Expression?, val oper: Token.Operator) {
+class ExpressionFactory(val lhs: IExpression?, val oper: Token.Operator) {
     constructor(oper: Token.Operator) : this(null, oper) {}
 
-    fun complete(rhs: Expression): Expression {
-        return Expression(oper, lhs, rhs)
+    fun complete(rhs: IExpression): IExpression {
+        if (isUnaryOperator()) {
+            return UnaryExpression(oper.toUnaryOperator()!!, rhs)
+        }
+        return BinaryExpression(oper.toBinaryOperator()!!, lhs!!, rhs)
     }
 
     fun isHigherPriorityThanRightHandUnary(otherOper: Token.Operator): Boolean =

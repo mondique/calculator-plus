@@ -2,68 +2,23 @@ package com.example.calculator
 
 import kotlin.math.pow
 
-fun applyAssigns(resultTree: Expression?, scope: VariableScope) {
-    if (resultTree == null) return
-    if (resultTree.isVal()) return
-    if (resultTree.oper!! !is BinaryOperator.Assign) {
-        applyAssigns(resultTree.x, scope)
-        applyAssigns(resultTree.y, scope)
-        return
-    }
-    applyAssigns(resultTree.y, scope)
-    if (resultTree.x == null) return
-    if (!resultTree.x.isVal()) return
-    val lhs = resultTree.x.getVal()
-    if (lhs !is Value.Variable) return
-    try {
-        val rhs = calculateResultFromTree(resultTree.y!!, scope)
-        scope.addVariable(lhs.name, rhs)
-    } catch(e: CalculationError) {}
-}
-
-// may throw
-fun calculateResultFromTree(
-    expression: Expression,
-    scope: VariableScope
-): Value.Number {
-    if (expression.isVal()) {
-        val exprVal: Value = expression.getVal()
-        if (exprVal is Value.Variable) {
-            val variableName = exprVal.name
-            if (variableName in scope) {
-                return scope.getValue(variableName)!!
-            } else {
-                throw CalculationError("variable $variableName not found")
-            }
-        }
-        return exprVal as Value.Number
-    }
-    if (expression.x == null) {
-        val rhs = calculateResultFromTree(expression.y!!, scope)
-        return (expression.oper!! as UnaryOperator).apply(rhs)
-    }
-    val lhs = calculateResultFromTree(expression.x, scope)
-    val rhs = calculateResultFromTree(expression.y!!, scope)
-    return (expression.oper!! as BinaryOperator).apply(lhs, rhs)
-}
-
 sealed class Operator()
 
-sealed class UnaryOperator() : Operator() {
+sealed class IUnaryOperator() : Operator() {
     abstract fun apply(x: Value.Number): Value.Number
 
-    class Add : UnaryOperator() {
+    class Add : IUnaryOperator() {
         override fun apply(x: Value.Number): Value.Number = x
     }
 
-    class Revert : UnaryOperator() {
+    class Revert : IUnaryOperator() {
         override fun apply(x: Value.Number): Value.Number = when(x) {
             is Value.Number.RealNumber -> Value.Number.RealNumber(-x.value)
             is Value.Number.Integer -> Value.Number.Integer(-x.value)
         }
     }
 
-    class BitwiseRevert : UnaryOperator() {
+    class BitwiseRevert : IUnaryOperator() {
         override fun apply(x: Value.Number): Value.Number = when(x) {
             is Value.Number.RealNumber -> throw CalculationError("~ is not applicable to real numbers")
             is Value.Number.Integer -> Value.Number.Integer(x.value.inv())
@@ -71,10 +26,10 @@ sealed class UnaryOperator() : Operator() {
     }
 }
 
-sealed class BinaryOperator() : Operator() {
+sealed class IBinaryOperator() : Operator() {
     abstract fun apply(x: Value.Number, y: Value.Number): Value.Number
 
-    class Xor : BinaryOperator() {
+    class Xor : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
                 throw CalculationError("^ is not applicable to real numbers")
@@ -85,7 +40,7 @@ sealed class BinaryOperator() : Operator() {
         }
     }
 
-    class Add : BinaryOperator() {
+    class Add : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
                 return Value.Number.RealNumber(x.toRealNumber().value + y.toRealNumber().value)
@@ -96,7 +51,7 @@ sealed class BinaryOperator() : Operator() {
         }
     }
 
-    class Subtract : BinaryOperator() {
+    class Subtract : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
                 return Value.Number.RealNumber(x.toRealNumber().value - y.toRealNumber().value)
@@ -107,7 +62,7 @@ sealed class BinaryOperator() : Operator() {
         }
     }
 
-    class Multiply : BinaryOperator() {
+    class Multiply : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
                 return Value.Number.RealNumber(x.toRealNumber().value * y.toRealNumber().value)
@@ -118,7 +73,7 @@ sealed class BinaryOperator() : Operator() {
         }
     }
 
-    class Divide : BinaryOperator() {
+    class Divide : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
                 if (y.toRealNumber().value == 0.0) {
@@ -138,7 +93,7 @@ sealed class BinaryOperator() : Operator() {
         }
     }
 
-    class Mod : BinaryOperator() {
+    class Mod : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
                 throw CalculationError("% is not applicable to real numbers")
@@ -152,7 +107,7 @@ sealed class BinaryOperator() : Operator() {
         }
     }
 
-    class Power : BinaryOperator() {
+    class Power : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (y.toRealNumber().value == 0.0) {
                 return if (x is Value.Number.Integer && y is Value.Number.Integer)
@@ -174,7 +129,7 @@ sealed class BinaryOperator() : Operator() {
         }
     }
 
-    class Assign : BinaryOperator() {
+    class Assign : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number = y
     }
 }
