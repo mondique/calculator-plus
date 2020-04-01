@@ -43,6 +43,7 @@ sealed class Token {
         // Any two binary and unary operators should have different priorities
         fun getBinaryPriority(): Int =
             when(type) {
+                "=" -> 1
                 "^" -> 6
                 "+" -> 9
                 "-" -> 9
@@ -50,7 +51,6 @@ sealed class Token {
                 "/" -> 10
                 "%" -> 10
                 "**" -> 13
-                "=" -> 18
                 else -> -1
             }
 
