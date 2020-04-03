@@ -116,14 +116,13 @@ sealed class IBinaryOperator() : Operator() {
             if (y.toRealNumber().value < 0.0 && x.toRealNumber().value == 0.0) {
                 throw CalculationError("division by 0")
             }
-            if (x is Value.Number.Integer && y is Value.Number.Integer) {
+            if (x is Value.Number.Integer && y is Value.Number.Integer && y.value > 0) {
                 return Value.Number.Integer(x.value.toDouble().pow(y.value))
             }
+            val a = x.toRealNumber()
             if (y is Value.Number.Integer) {
-                val a = x as Value.Number.RealNumber
-                return Value.Number.Integer(a.value.pow(y.value))
+                return Value.Number.RealNumber(a.value.pow(y.value))
             }
-            val a = x as Value.Number.RealNumber
             val b = y as Value.Number.RealNumber
             return Value.Number.RealNumber(a.value.pow(b.value))
         }
