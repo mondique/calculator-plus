@@ -1,38 +1,45 @@
 package com.example.calculator
 
-sealed class Token {
-    data class Operator(val type: String) : Token() {
+sealed class Token() {
+    abstract val source: String
+
+    override fun toString(): String = source
+
+    class Operator(val type: String, override val source: String) : Token() {
         enum class Direction {
             LeftToRight,
             RightToLeft
         }
 
         fun getBinaryCalcDir(): Direction = when(type) {
-            "=" -> Direction.RightToLeft
             "**" -> Direction.RightToLeft
             else -> Direction.LeftToRight
         }
 
+        fun getAssignCalcDir(): Direction = Direction.RightToLeft
+
         fun getUnaryCalcDir(): Direction = Direction.RightToLeft
 
         fun toUnaryOperator(): IUnaryOperator? = when(type) {
-            "+" -> IUnaryOperator.Add()
-            "-" -> IUnaryOperator.Revert()
-            "~" -> IUnaryOperator.BitwiseRevert()
+            "+" -> IUnaryOperator.Add
+            "-" -> IUnaryOperator.Revert
+            "~" -> IUnaryOperator.BitwiseRevert
             else -> null
         }
 
         fun toBinaryOperator(): IBinaryOperator? = when(type) {
-            "^" -> IBinaryOperator.Xor()
-            "+" -> IBinaryOperator.Add()
-            "-" -> IBinaryOperator.Subtract()
-            "*" -> IBinaryOperator.Multiply()
-            "/" -> IBinaryOperator.Divide()
-            "%" -> IBinaryOperator.Mod()
-            "**" -> IBinaryOperator.Power()
-            "=" -> IBinaryOperator.Assign()
+            "^" -> IBinaryOperator.Xor
+            "+" -> IBinaryOperator.Add
+            "-" -> IBinaryOperator.Subtract
+            "*" -> IBinaryOperator.Multiply
+            "/" -> IBinaryOperator.Divide
+            "%" -> IBinaryOperator.Mod
+            "**" -> IBinaryOperator.Power
             else -> null
         }
+
+        fun isAssign(): Boolean =
+            getAssignPriority() != -1
 
         fun canBeBinary(): Boolean =
             getBinaryPriority() != -1
@@ -40,10 +47,11 @@ sealed class Token {
         fun canBeUnary(): Boolean =
             getUnaryPriority() != -1
 
+        fun getAssignPriority(): Int = if (type == "=") 1 else -1
+
         // Any two binary and unary operators should have different priorities
         fun getBinaryPriority(): Int =
             when(type) {
-                "=" -> 1
                 "^" -> 6
                 "+" -> 9
                 "-" -> 9
@@ -62,16 +70,20 @@ sealed class Token {
                 else -> -1
             }
     }
-    data class Identifier(val name: String) : Token()
-    data class Integer(val value: Int) : Token()
-    data class FloatingPointNumber(val value: Double) : Token()
-    data class Parenthesis(val type: Char) : Token() {
-        fun isOpening(): Boolean = type == '('
-
-        fun matches(openingParen: Parenthesis): Boolean =
-            openingParen.isOpening() && type == ')'
+    class Identifier(val name: String, override val source: String) : Token()
+    class Integer(val value: Int, override val source: String) : Token()
+    class FloatingPointNumber(val value: Double, override val source: String) : Token()
+    class OpeningParenthesis(val type: Char, override val source: String) : Token()
+    class ClosingParenthesis(val type: Char, override val source: String) : Token() {
+        fun matches(openingParen: OpeningParenthesis): Boolean = when(openingParen.type) {
+            '(' -> type == ')'
+            '[' -> type == ']'
+            '{' -> type == '}'
+            else -> false
+        }
     }
-    object EOF : Token()
-    object Error : Token()
+    object EOF : Token() {
+        override val source = "end of input"
+    }
 }
 

@@ -5,6 +5,21 @@ abstract interface IExpression {
     abstract fun applyAssigns(scope: VariableScope)
 }
 
+class VariableAssignment(
+    val variable: Value.Variable,
+    val rhs: IExpression
+) : IExpression {
+    override fun calcValue(scope: VariableScope): Value.Number =
+        rhs.calcValue(scope)
+
+    override fun applyAssigns(scope: VariableScope) {
+        rhs.applyAssigns(scope)
+        try {
+            scope.addVariable(variable.name, rhs.calcValue(scope))
+        } catch(calcError: CalculationError) {}
+    }
+}
+
 class BinaryExpression(
     val oper: IBinaryOperator,
     val lhs: IExpression,
@@ -15,10 +30,8 @@ class BinaryExpression(
                    rhs.calcValue(scope))
 
     override fun applyAssigns(scope: VariableScope) {
+        lhs.applyAssigns(scope)
         rhs.applyAssigns(scope)
-        if (lhs is Value.Variable) {
-            scope.addVariable(lhs.name, rhs.calcValue(scope))
-        }
     }
 }
 class UnaryExpression(

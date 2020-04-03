@@ -7,7 +7,7 @@ class Lexer(private val source: String) {
     private var pos: Int = 0
     private var afterSpace: Boolean = false
 
-    fun getToken(): Token {
+    fun readToken(): Token {
         while (pos != source.length && source[pos] == ' ') {
             afterSpace = true
             pos++
@@ -24,14 +24,26 @@ class Lexer(private val source: String) {
         if (onNumber()) {
             return getNumber()
         }
-        return getOperatorOrNull() ?: Token.Error
+        val result: Token? = getOperatorOrNull()
+        if (result != null) {
+            return result
+        }
+        throw ParserError("invalid symbol: ${source[pos].toString()}")
     }
 
     private fun onParenthesis(): Boolean =
         source[pos] == '(' || source[pos] == ')'
+        || source[pos] == '[' || source[pos] == ']'
+        || source[pos] == '{' || source[pos] == '}'
 
     private fun getParenthesis(): Token {
-        val result = Token.Parenthesis(source[pos])
+        if (source[pos] == '(' || source[pos] == '[' || source[pos] == '{') {
+            val result = Token.OpeningParenthesis(source[pos], source[pos].toString())
+            pos++
+            return result
+        }
+        val emacsBs = "}])"
+        val result = Token.ClosingParenthesis(source[pos], source[pos].toString())
         pos++
         return result
     }
@@ -52,7 +64,8 @@ class Lexer(private val source: String) {
         while (nameEnd != source.length && isValidIdentifierChar(source[nameEnd])) {
             nameEnd++
         }
-        val result = Token.Identifier(source.subSequence(pos, nameEnd).toString())
+        val resultSource: String = source.subSequence(pos, nameEnd).toString()
+        val result = Token.Identifier(resultSource, resultSource)
         pos = nameEnd
         return result
     }
@@ -83,13 +96,13 @@ class Lexer(private val source: String) {
         pos = numberEnd
         val resultInt: Int? = resultString.toIntOrNull()
         if (resultInt != null) {
-            return Token.Integer(resultInt)
+            return Token.Integer(resultInt, resultString)
         }
         val resultFloat: Double? = resultString.toDoubleOrNull()
         if (resultFloat != null) {
-            return Token.FloatingPointNumber(resultFloat)
+            return Token.FloatingPointNumber(resultFloat, resultString)
         }
-        return Token.Error
+        throw ParserError("invalid number: $resultString")
     }
 
     private fun isValidNumberChar(c: Char): Boolean =
@@ -98,8 +111,9 @@ class Lexer(private val source: String) {
     private fun getOperatorOrNull(): Token? {
         var length: Int = min(3, source.length - pos)
         while (length > 0) {
-            val result = Token.Operator(source.subSequence(pos, pos + length).toString())
-            if (result.canBeUnary() || result.canBeBinary()) {
+            val resultSource: String = source.subSequence(pos, pos + length).toString()
+            val result = Token.Operator(resultSource, resultSource)
+            if (result.canBeUnary() || result.canBeBinary() || result.isAssign()) {
                 pos += length
                 return result
             }

@@ -31,18 +31,16 @@ class Calculator(
 
     fun calculateResult() {
         resetResult()
-        val errors: MutableList<String> = mutableListOf()
-        resultTree = Parser(errors).parse(inputExpression)
-        if (errors.isEmpty()) {
-            try {
-                result = resultTree!!.calcValue(scope)
-            } catch(e: CalculationError) {
-                result = null
-                error = e.message
-            }
-        } else {
+        try {
+            resultTree = Parser().parse(inputExpression)
+            result = resultTree!!.calcValue(scope)
+        } catch(parserError: ParserError) {
+            resultTree = null
             result = null
-            error = errors[0]
+            error = parserError.message
+        } catch(calcError: CalculationError) {
+            result = null
+            error = calcError.message
         }
     }
 

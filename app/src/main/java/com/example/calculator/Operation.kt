@@ -7,18 +7,18 @@ sealed class Operator()
 sealed class IUnaryOperator() : Operator() {
     abstract fun apply(x: Value.Number): Value.Number
 
-    class Add : IUnaryOperator() {
+    object Add : IUnaryOperator() {
         override fun apply(x: Value.Number): Value.Number = x
     }
 
-    class Revert : IUnaryOperator() {
+    object Revert : IUnaryOperator() {
         override fun apply(x: Value.Number): Value.Number = when(x) {
             is Value.Number.RealNumber -> Value.Number.RealNumber(-x.value)
             is Value.Number.Integer -> Value.Number.Integer(-x.value)
         }
     }
 
-    class BitwiseRevert : IUnaryOperator() {
+    object BitwiseRevert : IUnaryOperator() {
         override fun apply(x: Value.Number): Value.Number = when(x) {
             is Value.Number.RealNumber -> throw CalculationError("~ is not applicable to real numbers")
             is Value.Number.Integer -> Value.Number.Integer(x.value.inv())
@@ -29,7 +29,7 @@ sealed class IUnaryOperator() : Operator() {
 sealed class IBinaryOperator() : Operator() {
     abstract fun apply(x: Value.Number, y: Value.Number): Value.Number
 
-    class Xor : IBinaryOperator() {
+    object Xor : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
                 throw CalculationError("^ is not applicable to real numbers")
@@ -40,7 +40,7 @@ sealed class IBinaryOperator() : Operator() {
         }
     }
 
-    class Add : IBinaryOperator() {
+    object Add : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
                 return Value.Number.RealNumber(x.toRealNumber().value + y.toRealNumber().value)
@@ -51,7 +51,7 @@ sealed class IBinaryOperator() : Operator() {
         }
     }
 
-    class Subtract : IBinaryOperator() {
+    object Subtract : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
                 return Value.Number.RealNumber(x.toRealNumber().value - y.toRealNumber().value)
@@ -62,7 +62,7 @@ sealed class IBinaryOperator() : Operator() {
         }
     }
 
-    class Multiply : IBinaryOperator() {
+    object Multiply : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
                 return Value.Number.RealNumber(x.toRealNumber().value * y.toRealNumber().value)
@@ -73,7 +73,7 @@ sealed class IBinaryOperator() : Operator() {
         }
     }
 
-    class Divide : IBinaryOperator() {
+    object Divide : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
                 if (y.toRealNumber().value == 0.0) {
@@ -93,7 +93,7 @@ sealed class IBinaryOperator() : Operator() {
         }
     }
 
-    class Mod : IBinaryOperator() {
+    object Mod : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (x is Value.Number.RealNumber || y is Value.Number.RealNumber) {
                 throw CalculationError("% is not applicable to real numbers")
@@ -107,7 +107,7 @@ sealed class IBinaryOperator() : Operator() {
         }
     }
 
-    class Power : IBinaryOperator() {
+    object Power : IBinaryOperator() {
         override fun apply(x: Value.Number, y: Value.Number): Value.Number {
             if (y.toRealNumber().value == 0.0) {
                 return if (x is Value.Number.Integer && y is Value.Number.Integer)
@@ -128,9 +128,7 @@ sealed class IBinaryOperator() : Operator() {
             return Value.Number.RealNumber(a.value.pow(b.value))
         }
     }
-
-    class Assign : IBinaryOperator() {
-        override fun apply(x: Value.Number, y: Value.Number): Value.Number = y
-    }
 }
+
+object Assign : Operator()
 
