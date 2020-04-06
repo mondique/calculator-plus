@@ -1,11 +1,11 @@
 package com.example.calculator
 
 class Calculator(
-    val scope: VariableScope = VariableScope()
+    val scope: Scope = Scope()
 ) {
     var inputExpression: String = ""
-    private var resultTree: IExpression? = null
-    private var result: Value.Number? = null
+    private var resultTree: IRValue? = null
+    private var result: CalculationResult? = null
     private var error: String? = null
 
     init {
@@ -21,7 +21,9 @@ class Calculator(
         if (error == null) result.toString() else error!!
 
     fun applyAssigns() {
-        resultTree?.applyAssigns(scope)
+        if (error == null) {
+            resultTree?.applyAssigns(scope)
+        }
     }
 
     fun reset() {

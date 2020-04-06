@@ -21,6 +21,12 @@ class Lexer(private val source: String) {
         if (onIdentifier()) {
             return getIdentifier()
         }
+        if (onArgsAmount()) {
+            return getArgsAmount()
+        }
+        if (onComma()) {
+            return getComma()
+        }
         if (onNumber()) {
             return getNumber()
         }
@@ -80,6 +86,39 @@ class Lexer(private val source: String) {
         if (0 <= c - 'A' && 'Z' - c >= 0)
             return true
         return false
+    }
+
+    private fun onArgsAmount(): Boolean = source[pos] == '$'
+
+    private fun getArgsAmount(): Token {
+        val prevPos: Int = pos
+        pos++
+        if (pos == source.length || !onInteger()) {
+            throw ParserError("expected an integer after $")
+        }
+        return Token.ArgsAmount(getInteger(), source.subSequence(prevPos, pos).toString())
+    }
+
+    private fun onInteger(): Boolean = isDigit(source[pos])
+
+    private fun getInteger(): Int {
+        var numberEnd: Int = pos
+        while (numberEnd != source.length && isValidIntegerChar(source[numberEnd])) {
+            numberEnd++
+        }
+        val resultString: String = source.subSequence(pos, numberEnd).toString()
+        pos = numberEnd
+        return resultString.toInt()
+    }
+
+    private fun isValidIntegerChar(c: Char): Boolean = isDigit(c)
+
+    private fun onComma(): Boolean = source[pos] == ','
+
+    private fun getComma(): Token {
+        val result: Token = Token.Comma(source[pos].toString())
+        pos++
+        return result
     }
 
     private fun onNumber(): Boolean {

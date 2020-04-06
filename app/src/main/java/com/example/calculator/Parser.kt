@@ -2,19 +2,23 @@ package com.example.calculator
 
 import android.util.Log
 
-class Parser() {
+class Parser {
     private var errors: MutableList<String> = mutableListOf()
-    private var incompleteLhsOps: MutableList<ExpressionFactory> = mutableListOf()
+    private var incompleteLhsOps: MutableList<IExpressionFactory> = mutableListOf()
     private lateinit var lexerView: LexerView
 
-    fun parse(expression: String, hasToEnd: Boolean = true): IExpression {
+    fun parse(expression: String, hasToEnd: Boolean = true): IRValue {
         return parse(LexerView(Lexer(expression)), hasToEnd)
     }
 
     private class LexerView(private val lexer: Lexer) {
         private var curToken = lexer.readToken()
+        private var nextToken = lexer.readToken()
+        private var nextNextToken = lexer.readToken()
 
         fun peek(): Token = curToken
+        fun peekNext(): Token = nextToken
+        fun peekNextNext(): Token = nextNextToken
 
         fun readToken(): Token {
             val result: Token = curToken
@@ -23,15 +27,13 @@ class Parser() {
         }
 
         fun move() {
-            if (curToken !is Token.EOF) {
-                curToken = lexer.readToken()
-            }
+            curToken = nextToken
+            nextToken = nextNextToken
+            nextNextToken = lexer.readToken()
         }
-
-        fun reachedEnd(): Boolean = curToken is Token.EOF
     }
 
-    private fun parse(expressionText: LexerView, hasToEnd: Boolean): IExpression {
+    private fun parse(expressionText: LexerView, hasToEnd: Boolean): IRValue {
         reset(expressionText)
         return parse(hasToEnd)
     }
@@ -42,11 +44,13 @@ class Parser() {
         lexerView = expressionText
     }
 
-    private fun parse(hasToEnd: Boolean): IExpression {
+    private fun parse(hasToEnd: Boolean): IRValue {
         while (true) {
             val curToken: Token = lexerView.peek()
             if (curToken is Token.ClosingParenthesis
                 || curToken is Token.EOF
+                || curToken is Token.ArgsAmount
+                || curToken is Token.Comma
                 || curToken is Token.Operator && !curToken.canBeUnary()) {
                 throw ParserError("expected an expression before $curToken")
             }
@@ -54,18 +58,18 @@ class Parser() {
                 parseUnaryOperator()
                 continue
             }
-            val expr: IExpression = if (curToken is Token.OpeningParenthesis) {
-                parseExpressionInParentheses()
-            } else {
-                parsePrimitive()
-            }
+            val expr: IExpression = parseMember()
             val nextToken: Token = lexerView.peek()
-            if (nextToken is Token.Operator && nextToken.canBeBinary()) {
-                parseBinaryOperator(expr)
+            if (nextToken is Token.Operator && nextToken.isAssign()) {
+                val lvalueExpr: ILValue = toLValueOrNull(expr) ?: throw ParserError("expected lvalue before =")
+                parseAssignOperator(lvalueExpr)
                 continue
             }
-            if (nextToken is Token.Operator && nextToken.isAssign()) {
-                parseAssignOperator(expr)
+            if (expr !is IRValue) {
+                throw ParserError("expected = after lvalue")
+            }
+            if (nextToken is Token.Operator && nextToken.canBeBinary()) {
+                parseBinaryOperator(expr)
                 continue
             }
             if (!hasToEnd || nextToken is Token.EOF) {
@@ -75,66 +79,133 @@ class Parser() {
         }
     }
 
-    private fun parsePrimitive(): IExpression {
-        val curToken: Token = lexerView.readToken()
-        val result: IExpression? = when(curToken) {
-            is Token.Identifier -> Value.Variable(curToken.name)
-            is Token.Integer -> Value.Number.Integer(curToken.value)
-            is Token.FloatingPointNumber -> Value.Number.RealNumber(curToken.value)
-            else -> null
-        }
-        return result!!
-    }
-
-    private fun parseExpressionInParentheses(): IExpression {
-        val openingParen: Token.OpeningParenthesis = lexerView.readToken() as Token.OpeningParenthesis
-        val result: IExpression = Parser().parse(lexerView, hasToEnd=false)
-        val closingParen: Token = lexerView.readToken()
-        if (closingParen !is Token.ClosingParenthesis
-            || !closingParen.matches(openingParen)) {
-            throw ParserError("mismatched parentheses: $openingParen and $closingParen")
+    private fun parseMember(): IRValue {
+        var result: IRValue = if (lexerView.peek() is Token.OpeningParenthesis)
+            parseExpressionInParentheses() else parsePrimitive()
+        while (lexerView.peek() is Token.OpeningParenthesis) {
+            result = parseCallTo(result)
         }
         return result
     }
 
+    private fun parsePrimitive(): IRValue {
+        val curToken: Token = lexerView.readToken()
+        return when(curToken) {
+            is Token.Identifier -> Variable(curToken.name)
+            is Token.Integer -> Value.Number.Integer(curToken.value)
+            is Token.FloatingPointNumber -> Value.Number.RealNumber(curToken.value)
+            else -> null
+        }!!
+    }
+
+    private fun parseCallTo(function: IRValue): IRValue {
+        val openingParen: Token.OpeningParenthesis = lexerView.readToken() as Token.OpeningParenthesis
+        val args: MutableList<IRValue> = mutableListOf()
+        if (lexerView.peek() !is Token.ClosingParenthesis) {
+            while (true) {
+                val argument: IRValue = Parser().parse(lexerView, hasToEnd=false)
+                args.add(argument)
+                val comma: Token = lexerView.peek()
+                if (comma !is Token.Comma) {
+                    break
+                }
+                lexerView.move()
+            }
+        }
+        parseClosingParenthesis(openingParen)
+        return FunctionCall(function, args.toList())
+    }
+
+    private fun toLValueOrNull(expr: IExpression): ILValue? {
+        if (expr is ILValue) {
+            return expr
+        }
+        if (expr is Variable) {
+            return VariableDeclaration(expr.name)
+        }
+        if (expr is FunctionCall) {
+            val function: IRValue = expr.functionTree
+            if (function !is Variable) {
+                return null
+            }
+            val args: List<String> = toArgNamesOrNull(expr.args) ?: return null
+            return FunctionDeclaration(function.name, args)
+        }
+        return null
+    }
+
+    private fun toArgNamesOrNull(args: List<IRValue>): List<String>? {
+        val result: MutableList<String> = mutableListOf()
+        for (expr in args) {
+            if (expr !is Variable) {
+                return null
+            }
+            result.add(expr.name)
+        }
+        return result.toList()
+    }
+
+    private fun parseExpressionInParentheses(): IRValue {
+        val openingParen: Token.OpeningParenthesis = lexerView.readToken() as Token.OpeningParenthesis
+        val result: IRValue = Parser().parse(lexerView, hasToEnd=false)
+        parseClosingParenthesis(openingParen)
+        return result
+    }
+
+    private fun parseClosingParenthesis(openingParen: Token.OpeningParenthesis) {
+        val closingParen: Token = lexerView.readToken()
+        if (closingParen !is Token.ClosingParenthesis) {
+            throw ParserError("expected a closing parenthesis instead of $closingParen")
+        }
+        if (!closingParen.matches(openingParen)) {
+            throw ParserError("mismatched parentheses: $openingParen and $closingParen")
+        }
+    }
+
     private fun parseUnaryOperator() {
         val oper: Token.Operator = lexerView.readToken() as Token.Operator
-        if (!incompleteLhsOps.isEmpty() &&
-            incompleteLhsOps.last().isHigherPriorityThanRightHandUnary(oper)) {
+        if (lastIncompleteExprIsHigherPriorityThanUnary(oper)) {
             throw ParserError("unary operator with lower priority met: $oper")
-            return
         }
-        incompleteLhsOps.add(ExpressionFactory(oper))
+        incompleteLhsOps.add(UnaryExpressionFactory(oper))
     }
 
-    private fun parseBinaryOperator(immediateLhs: IExpression) {
+    private fun lastIncompleteExprIsHigherPriorityThanUnary(oper: Token.Operator): Boolean {
+        val lastIncompleteExpr: IExpressionFactory? = incompleteLhsOps.lastOrNull()
+        return lastIncompleteExpr != null
+               && lastIncompleteExpr is IOperatorExpressionFactory
+               && lastIncompleteExpr.isHigherPriorityThanRightHandUnary(oper)
+    }
+
+    private fun parseBinaryOperator(immediateLhs: IRValue) {
         val oper: Token.Operator = lexerView.readToken() as Token.Operator
-        var realLhs = immediateLhs
-        while (!incompleteLhsOps.isEmpty()
-               && incompleteLhsOps.last().isHigherPriorityThanRightHandBinary(oper)) {
+        var realLhs: IRValue = immediateLhs
+        while (lastIncompleteExprIsHigherPriorityThanBinary(oper)) {
             realLhs = incompleteLhsOps.last().complete(realLhs)
             incompleteLhsOps.removeAt(incompleteLhsOps.lastIndex)
         }
-        incompleteLhsOps.add(ExpressionFactory(realLhs, oper))
+        incompleteLhsOps.add(BinaryExpressionFactory(realLhs, oper))
     }
 
-    private fun parseAssignOperator(immediateLhs: IExpression) {
-        val oper: Token.Operator = lexerView.readToken() as Token.Operator
-        var realLhs = immediateLhs
-        while (!incompleteLhsOps.isEmpty()
-               && incompleteLhsOps.last().isHigherPriorityThanRightHandAssign(oper)) {
-            realLhs = incompleteLhsOps.last().complete(realLhs)
-            incompleteLhsOps.removeAt(incompleteLhsOps.lastIndex)
-        }
-        if (realLhs !is Value.Variable) {
-            throw ParserError("attempted assignment to a non-variable")
-        }
-        incompleteLhsOps.add(ExpressionFactory(realLhs as Value.Variable, oper))
+    private fun lastIncompleteExprIsHigherPriorityThanBinary(oper: Token.Operator): Boolean {
+        val lastIncompleteExpr: IExpressionFactory? = incompleteLhsOps.lastOrNull()
+        return lastIncompleteExpr != null
+               && lastIncompleteExpr is IOperatorExpressionFactory
+               && lastIncompleteExpr.isHigherPriorityThanRightHandBinary(oper)
     }
 
-    private fun completeByRhs(rhs: IExpression): IExpression {
+    private fun parseAssignOperator(lhs: ILValue) {
+        lexerView.readToken() // Token.Operator("=")
+        if (incompleteLhsOps.isNotEmpty()
+            && incompleteLhsOps.last() !is AssignmentFactory) {
+            throw ParserError("attempted assignment to non-lvalue")
+        }
+        incompleteLhsOps.add(AssignmentFactory(lhs))
+    }
+
+    private fun completeByRhs(rhs: IRValue): IRValue {
         var result = rhs
-        while (!incompleteLhsOps.isEmpty()) {
+        while (incompleteLhsOps.isNotEmpty()) {
             result = incompleteLhsOps.last().complete(result)
             incompleteLhsOps.removeAt(incompleteLhsOps.lastIndex)
         }

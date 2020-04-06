@@ -71,6 +71,8 @@ sealed class Token() {
             }
     }
     class Identifier(val name: String, override val source: String) : Token()
+    class ArgsAmount(val amount: Int, override val source: String) : Token()
+    class Comma(override val source: String) : Token()
     class Integer(val value: Int, override val source: String) : Token()
     class FloatingPointNumber(val value: Double, override val source: String) : Token()
     class OpeningParenthesis(val type: Char, override val source: String) : Token()
