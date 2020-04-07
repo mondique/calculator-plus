@@ -49,9 +49,6 @@ class FunctionCall(val functionTree: IRValue, val args: List<IRValue>) : IRValue
         if (function !is CalculationResult.Function) {
             throw CalculationError("variable is not a function")
         }
-        if (function.argNames.size != args.size) {
-            throw CalculationError("function takes a different amount of arguments")
-        }
         val calculatedArgs: List<CalculationResult> = List(args.size, { args[it].calcValue(scope) })
         try {
             return function.calcValue(calculatedArgs, scope)
@@ -102,7 +99,7 @@ sealed class Value : IRValue {
 class Assignment(val lhs: ILValue, val rhs: IRValue) : IRValue {
     override fun calcValue(scope: Scope): CalculationResult = when(lhs) {
         is VariableDeclaration -> rhs.calcValue(scope)
-        is FunctionDeclaration -> CalculationResult.Function(lhs.argNames, rhs, scope)
+        is FunctionDeclaration -> CalculationResult.Function.UserDefinedFunction(lhs.argNames, rhs, scope)
     }
 
     override fun applyAssigns(scope: Scope) {

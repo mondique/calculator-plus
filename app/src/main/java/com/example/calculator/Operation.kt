@@ -10,7 +10,16 @@ sealed class IUnaryOperator : Operator() {
             return applyToValues(x)
         }
         val f: CalculationResult.Function = x as CalculationResult.Function
-        return CalculationResult.Function(f.argNames, UnaryExpression(this, f.body), f.definitionScope)
+        return when(f) {
+            is CalculationResult.Function.UserDefinedFunction ->
+                CalculationResult.Function.UserDefinedFunction(f.argNames, UnaryExpression(this, f.body), f.definitionScope)
+            is CalculationResult.Function.STLFunction -> {
+                val argName = InternalVariableNameGenerator.generateInternalVariableName()
+                CalculationResult.Function.UserDefinedFunction(listOf(argName), UnaryExpression(
+                    this, FunctionCall(Variable(f.name), listOf(Variable(argName)))
+                ), Scope())
+            }
+        }
     }
 
     abstract fun applyToValues(x: CalculationResult.Value): CalculationResult.Value
@@ -50,7 +59,7 @@ sealed class IBinaryOperator : Operator() {
         }
         val f: CalculationResult.Function = x as CalculationResult.Function
         val g: CalculationResult.Function = y as CalculationResult.Function
-        if (f.argNames.size != g.argNames.size) {
+        if (f.argsAmount != g.argsAmount) {
             throw CalculationError("attempted to apply binary operator to objects with different signatures")
         }
         throw CalculationError("binary operations on functions are currently not supported")

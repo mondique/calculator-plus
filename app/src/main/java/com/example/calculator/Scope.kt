@@ -1,6 +1,6 @@
 package com.example.calculator
 
-class Scope(private val valueByVariableName: MutableMap<String, CalculationResult> = mutableMapOf()) {
+class Scope(private val valueByVariableName: MutableMap<String, CalculationResult> = stlValues) {
     fun getVariableValue(name: String): CalculationResult = valueByVariableName[name]!!
 
     fun addVariable(name: String, value: CalculationResult) {
